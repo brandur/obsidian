@@ -20,7 +20,7 @@ import Obsidian.View
 -- When starting up, start listening for connections immediately. The number 
 -- of threads should be the same as what the frontend webserver is configured 
 -- with.
-main :: IO()
+main :: IO ()
 main = do cp <- liftM forceEither getConfig 
           runFastCGIConcurrent' forkIO 2048 $ runApp cp handleRequest
 
@@ -60,8 +60,9 @@ dispatch' method path =
 -- appropriate module.
 dispatch :: String -> [String] -> App CGIResult
 
-dispatch "GET" ["haskell"]           = contentPage "haskell" ["haskell", "is tricky"]
---dispatch "GET" ["help"]              = stdPage "help"
+dispatch "GET" ["haskell", "couch", "put"] = couchPage
+dispatch "GET" ["haskell"]   = contentPage "haskell" ["haskell", "is tricky"]
+--dispatch "GET" ["help"]    = stdPage "help"
 
 dispatch _ path = output404 path
 

@@ -1,12 +1,18 @@
 module Obsidian.View (
-    contentPage, stdPage
+    contentPage, stdPage, couchPage
 ) where
 
-import Text.XHtml.Strict ( (<<), (+++), (!), Html, concatHtml, body, header, 
-                           paragraph, showHtml, theclass, thediv, thetitle )
+import Text.XHtml.Strict   ( (<<), (+++), (!), Html, concatHtml, body, header, 
+                             paragraph, showHtml, theclass, thediv, thetitle )
 
 import Obsidian.App
+import Obsidian.Article
 import Obsidian.CGI
+
+couchPage :: App CGIResult
+couchPage = do
+    (d, r) <- newDoc' (Article "Test Article" "Test article's body.")
+    contentPage "inserted" [ "inserted random_doc", (show d), (show r) ]
 
 contentPage :: String -> [String] -> App CGIResult
 contentPage title' body' = do

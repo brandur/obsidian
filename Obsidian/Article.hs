@@ -1,16 +1,25 @@
 module Obsidian.Article (
+    Article(..)
 ) where
 
-import Obsidian.App
+import Database.CouchDB.JSON ( jsonField, jsonObject )
+import Text.JSON             ( JSValue(..), JSON, readJSON, showJSON, toJSObject)
 
-{- | Gets an option from the articles section of the config file. -}
-getArticleOption :: String -> App (Maybe String)
-getArticleOption option = getOption "article"
+data Article = Article
+    { articleTitle       :: String
+    , articleBody        :: String
+    } deriving (Eq,Show)
+ 
+instance JSON Article where
+ 
+    showJSON (Article title body) = JSObject $ toJSObject
+        [ ("title", showJSON title)
+        , ("body", showJSON body)
+        ]
+ 
+    readJSON val = do
+        obj         <- jsonObject val
+        title       <- jsonField "title" obj
+        body        <- jsonField "body" obj
+        return (Article title body)
 
-{- | Gets the path to the Atom XML file containing mutelight.org articles. -}
-getArticleXMLPath :: App String
-getArticleXMLPath = fromJust <$> getArticleOption "xml_path"
-
-publishedArticles :: App [Article]
-publishedArticles = do
-    xml  <- readFile getArticleXMLPath
