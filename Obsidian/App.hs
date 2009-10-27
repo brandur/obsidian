@@ -24,6 +24,11 @@ import Network.CGI.Monad    ( MonadCGI(..) )
 import Text.JSON            ( JSON )
 
 import Obsidian.CGI
+import Obsidian.Util
+
+-- ---------------------------------------------------------------------------
+-- Monad
+--
 
 {- | Provides a container for entities relevant to the current run of the 
    application. -}
@@ -53,19 +58,17 @@ instance MonadCGI App where
     cgiAddHeader n = AppT . lift . cgiAddHeader n
     cgiGet = AppT . lift . cgiGet
 
-{- | Outputs a 404 page. -}
--- @todo: add logging here
-output404 :: [String] -> App CGIResult
-output404 s = outputNotFound $ intercalate "/" s
-
---- --------------------------------------------------------------------------
--- runApp
+-- ---------------------------------------------------------------------------
+-- Entry-point
 --
 
 {- | Creates the Reader environment, and returns the CGIResult from within the 
    App monad to the CGI monad. -}
 runApp :: ConfigParser -> App CGIResult -> CGI CGIResult
 runApp cp (AppT a) = do
+    let logPath     = forceEither $ get cp "log" "path"
+    let logPriority = forceEither $ get cp "log" "priority"
+    liftIO $ initLog logPath logPriority
     let dbName = forceEither $ get cp "db" "name"
     -- We'd like to create our database if it doesn't exist. Unfortunately, 
     -- the CouchDB lib doesn't seem to provide a way to check whether a 
@@ -75,14 +78,14 @@ runApp cp (AppT a) = do
     runReaderT a AppEnv { appCP = cp, 
                           appDB = db dbName }
 
---- --------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
 -- Exceptions
 --
 
 tryApp :: App a -> App (Either SomeException a)
 tryApp (AppT c) = AppT (ReaderT (tryCGI' . runReaderT c))
 
---- --------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
 -- Configuration
 --
 
@@ -98,9 +101,9 @@ getOption section option = do
             error $ "no config option: " ++ section ++ "/" ++ option
         Right o -> return $ Just o
 
---- --------------------------------------------------------------------------
---- Database 
----
+-- ---------------------------------------------------------------------------
+-- Database 
+--
 
 -- @todo: error handling
 newDoc' :: (JSON a) => a -> App (Doc, Rev)
@@ -108,4 +111,13 @@ newDoc' body = do
     db' <- asks appDB
     (d, r) <- liftIO $ runCouchDB' $ newDoc db' body
     return $ (d, r)
+
+-- ---------------------------------------------------------------------------
+-- Output
+--
+
+{- | Outputs a 404 page. -}
+-- @todo: add logging here
+output404 :: [String] -> App CGIResult
+output404 s = outputNotFound $ intercalate "/" s
 

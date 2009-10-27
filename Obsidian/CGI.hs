@@ -15,6 +15,10 @@ import Network.CGI.Monad         ( CGI, CGIT(..), MonadCGI(..) )
 import Network.CGI.Protocol      ( CGIResult(..) )
 import Text.JSON                 ( JSON, encode, toJSObject )
 
+-- ---------------------------------------------------------------------------
+-- Output
+--
+
 {- | Outputs some string to CGI and encodes it automatically (CGI's output 
    does note encode). -}
 output' :: MonadCGI m => String -> m CGIResult
@@ -30,9 +34,9 @@ outputText s = do
 outputJSON :: (MonadCGI m, MonadIO m, JSON a) => [(String, a)] -> m CGIResult
 outputJSON = outputText . encode . toJSObject
 
--- 
+-- ---------------------------------------------------------------------------
 -- Exceptions
--- 
+--
 
 tryCGI' :: Exception e => CGI a -> CGI (Either e a)
 tryCGI' (CGIT c) = CGIT (ReaderT (WriterT . f . runWriterT . runReaderT c ))

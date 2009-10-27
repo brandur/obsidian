@@ -2,10 +2,7 @@ module Main where
 
 import Codec.Binary.UTF8.String ( decodeString )
 import Control.Concurrent       ( forkIO )
-import Control.Monad            ( join, liftM )
-import Control.Monad.Error      ( runErrorT )
-import Control.Monad.Trans      ( liftIO )
-import Data.ConfigFile          ( CPError, ConfigParser, emptyCP, readfile )
+import Control.Monad            ( liftM )
 import Data.Either.Utils        ( forceEither )
 import Data.List                ( find, intercalate )
 import Data.List.Split          ( splitOn )
@@ -15,22 +12,19 @@ import Network.FastCGI          ( runFastCGIConcurrent' )
 import Network.URI              ( URI(..), unEscapeString )
 
 import Obsidian.App
+import Obsidian.Util
 import Obsidian.View
 
 -- When starting up, start listening for connections immediately. The number 
 -- of threads should be the same as what the frontend webserver is configured 
 -- with.
 main :: IO ()
-main = do cp <- liftM forceEither getConfig 
+main = do cp <- liftM forceEither $ getConfig configFile
           runFastCGIConcurrent' forkIO 2048 $ runApp cp handleRequest
 
 -- Here we just define the config's location
 configFile :: String
 configFile = "etc/obsidian.conf"
-
--- Gets a config parser (or an error)
-getConfig :: IO (Either CPError ConfigParser)
-getConfig = runErrorT $ join $ liftIO $ readfile emptyCP configFile
 
 -- Digest the incoming URI before sending it to the dispatcher
 handleRequest :: App CGIResult
