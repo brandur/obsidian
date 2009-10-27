@@ -3,6 +3,7 @@ module Main where
 import Codec.Binary.UTF8.String ( decodeString )
 import Control.Concurrent       ( forkIO )
 import Control.Monad            ( liftM )
+import Control.Monad.Trans      ( liftIO )
 import Data.Either.Utils        ( forceEither )
 import Data.List                ( find, intercalate )
 import Data.List.Split          ( splitOn )
@@ -20,6 +21,7 @@ import Obsidian.View
 -- with.
 main :: IO ()
 main = do cp <- liftM forceEither $ getConfig configFile
+          liftIO $ initLog cp
           runFastCGIConcurrent' forkIO 2048 $ runApp cp handleRequest
 
 -- Here we just define the config's location

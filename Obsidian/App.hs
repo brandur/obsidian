@@ -66,9 +66,6 @@ instance MonadCGI App where
    App monad to the CGI monad. -}
 runApp :: ConfigParser -> App CGIResult -> CGI CGIResult
 runApp cp (AppT a) = do
-    let logPath     = forceEither $ get cp "log" "path"
-    let logPriority = forceEither $ get cp "log" "priority"
-    liftIO $ initLog logPath logPriority
     let dbName = forceEither $ get cp "db" "name"
     -- We'd like to create our database if it doesn't exist. Unfortunately, 
     -- the CouchDB lib doesn't seem to provide a way to check whether a 
