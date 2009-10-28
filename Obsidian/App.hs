@@ -24,6 +24,12 @@ import Network.CGI.Monad    ( MonadCGI(..) )
 import Text.JSON            ( JSON )
 
 import Obsidian.CGI
+import Obsidian.Util
+
+-- ---------------------------------------------------------------------------
+
+m :: String
+m = "Obisidian.App"
 
 -- ---------------------------------------------------------------------------
 -- Monad
@@ -112,8 +118,10 @@ newDoc' body = do
 -- Output
 --
 
-{- | Outputs a 404 page. -}
--- @todo: add logging here
+{- | Outputs a 404 page and logs the requested resource. -}
 output404 :: [String] -> App CGIResult
-output404 s = outputNotFound $ intercalate "/" s
+output404 s = do 
+    let p = intercalate "/" s
+    liftIO $ infoM m $ printf "sent 404, requested path was <%s>" p
+    outputNotFound p
 
