@@ -12,7 +12,6 @@ import Control.Monad.Trans       ( liftIO )
 import Data.Char                 ( isSpace, toLower )
 import Data.ConfigFile           ( CPError, ConfigParser, emptyCP, get, 
                                    readfile )
-import Data.Either.Utils         ( forceEither )
 import System.Log.Logger         ( addHandler, alertM, criticalM, debugM, 
                                    emergencyM, errorM, infoM, noticeM, 
                                    Priority(..), rootLoggerName, setLevel, 
@@ -37,7 +36,15 @@ trim = f . f
 
 -- Gets a config parser (or an error)
 getConfig :: String -> IO (Either CPError ConfigParser)
-getConfig c = runErrorT $ join $ liftIO $ readfile emptyCP c
+getConfig c = runErrorT . join . liftIO $ readfile emptyCP c
+
+{- | ConfigParser get that allows a default value. -}
+getD :: ConfigParser -> String -> String -> String -> String
+getD cp section option defaultVal = do 
+    opt <- runErrorT $ get cp section option
+    case opt of 
+        Left _  -> defaultVal
+        Right o -> o
 
 -- ---------------------------------------------------------------------------
 -- Logging
@@ -45,8 +52,8 @@ getConfig c = runErrorT $ join $ liftIO $ readfile emptyCP c
 
 initLog :: ConfigParser -> IO ()
 initLog cp = do 
-    let path     = forceEither $ get cp "log" "path"
-    let priority = toPriority $ forceEither $ get cp "log" "priority"
+    let path     = getD cp "log" "path" "obsidian.log"
+    let priority = toPriority $ getD cp "log" "priority" "warning"
     -- Second arg here (priority) appears to do nothing
     h <- fileHandler path priority
     updateGlobalLogger rootLoggerName (addHandler h . setLevel priority)
@@ -59,7 +66,8 @@ toPriority p = do
     case p' of 
         "debug"     -> DEBUG
         "info"      -> INFO 
-        "notice"    -> WARNING
+        "notice"    -> NOTICE 
+        "warning"   -> WARNING
         "error"     -> ERROR
         "critical"  -> CRITICAL
         "alert"     -> ALERT
