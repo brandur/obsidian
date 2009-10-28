@@ -8,11 +8,11 @@ import Data.Either.Utils        ( forceEither )
 import Data.List                ( find, intercalate )
 import Data.List.Split          ( splitOn )
 import Network.CGI              ( redirect, requestURI, requestMethod )
-import Network.CGI.Protocol     ( CGIResult(..) )
 import Network.FastCGI          ( runFastCGIConcurrent' )
 import Network.URI              ( URI(..), unEscapeString )
 
 import Obsidian.App
+import Obsidian.CGI
 import Obsidian.Util
 import Obsidian.View
 
@@ -22,7 +22,8 @@ import Obsidian.View
 main :: IO ()
 main = do cp <- liftM forceEither $ getConfig configFile
           liftIO $ initLog cp
-          runFastCGIConcurrent' forkIO 2048 $ runApp cp handleRequest
+          runFastCGIConcurrent' forkIO 2048 $ do 
+              handleErrors' $ runApp cp handleRequest
 
 -- Here we just define the config's location
 configFile :: String

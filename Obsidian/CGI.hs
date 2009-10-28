@@ -1,19 +1,25 @@
 module Obsidian.CGI (
-    CGIResult(..), output', outputJSON, outputText, setHeader, tryCGI'
+    CGIResult(..), catchCGI', handleErrors', output', outputJSON, outputText, 
+    setHeader, tryCGI'
 ) where
 
 import Control.Arrow             ( first )
-import Control.Exception         ( Exception, try )
+import Control.Exception         ( Exception, SomeException, try )
 import Control.Monad             ( liftM )
 import Control.Monad.Reader      ( ReaderT(..) )
 import Control.Monad.Writer      ( WriterT(..) )
-import Control.Monad.Trans       ( MonadIO )
+import Control.Monad.Trans       ( MonadIO, liftIO )
 import Data.ByteString.Lazy.UTF8 ( fromString )
 import Data.Monoid               ( mempty )
-import Network.CGI               ( setHeader )
+import Network.CGI               ( outputInternalServerError, setHeader )
 import Network.CGI.Monad         ( CGI, CGIT(..), MonadCGI(..) )
 import Network.CGI.Protocol      ( CGIResult(..) )
 import Text.JSON                 ( JSON, encode, toJSObject )
+
+import Obsidian.Util
+
+m :: String
+m = "Obsidian.CGI"
 
 -- ---------------------------------------------------------------------------
 -- Output
@@ -23,6 +29,11 @@ import Text.JSON                 ( JSON, encode, toJSObject )
    does note encode). -}
 output' :: MonadCGI m => String -> m CGIResult
 output' = return . CGIOutput . fromString
+
+outputException' ::  (MonadCGI m, MonadIO m) => SomeException -> m CGIResult
+outputException' ex = do
+    liftIO $ exceptionM m ex
+    outputInternalServerError [show ex]
 
 {- | Outputs plain text to CGI. -}
 outputText :: (MonadCGI m, MonadIO m) => String -> m CGIResult
@@ -38,7 +49,16 @@ outputJSON = outputText . encode . toJSObject
 -- Exceptions
 --
 
+handleErrors' :: CGI CGIResult -> CGI CGIResult
+handleErrors' a = catchCGI' (do 
+                      r <- a
+                      return r)
+                  (outputException')
+
+catchCGI' :: Exception e => CGI a -> (e -> CGI a) -> CGI a
+catchCGI' c h = tryCGI' c >>= either h return
+
 tryCGI' :: Exception e => CGI a -> CGI (Either e a)
 tryCGI' (CGIT c) = CGIT (ReaderT (WriterT . f . runWriterT . runReaderT c ))
     where
-      f = liftM (either (\ex -> (Left ex, mempty)) (first Right)) . try
+        f = liftM (either (\ex -> (Left ex, mempty)) (first Right)) . try

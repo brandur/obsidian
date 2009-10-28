@@ -17,3 +17,4 @@ start : $(cgi)
 
 stop : 
 	/etc/init.d/brandur-haskell-fcgi stop
+

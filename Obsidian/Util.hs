@@ -1,11 +1,12 @@
 module Obsidian.Util (
-    getConfig, initLog, trim, 
+    exceptionM, getConfig, initLog, trim, 
     -- Log
     alertM, criticalM, debugM, emergencyM, errorM, infoM, noticeM, warningM, 
     -- Printf
     printf
 ) where
 
+import Control.Exception         ( SomeException )
 import Control.Monad             ( join )
 import Control.Monad.Error       ( runErrorT )
 import Control.Monad.Trans       ( liftIO )
@@ -49,6 +50,9 @@ getD cp section option defaultVal = do
 -- ---------------------------------------------------------------------------
 -- Logging
 --
+
+exceptionM :: String -> SomeException -> IO ()
+exceptionM m' ex = errorM m' $ "exception: " ++ (show ex)
 
 initLog :: ConfigParser -> IO ()
 initLog cp = do 

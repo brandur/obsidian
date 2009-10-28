@@ -2,16 +2,19 @@ module Obsidian.View (
     contentPage, stdPage, couchPage
 ) where
 
+import Control.Monad.Trans ( liftIO )
 import Text.XHtml.Strict   ( (<<), (+++), (!), Html, concatHtml, body, header, 
                              paragraph, showHtml, theclass, thediv, thetitle )
 
 import Obsidian.App
 import Obsidian.Article
 import Obsidian.CGI
+import Obsidian.Util
 
 couchPage :: App CGIResult
 couchPage = do
     (d, r) <- newDoc' (Article "Test Article" "Test article's body.")
+    liftIO $ debugM "Obsidian.View" $ printf "inserted doc: %s,%s" (show d) (show r)
     contentPage "inserted" [ "inserted random_doc", (show d), (show r) ]
 
 contentPage :: String -> [String] -> App CGIResult
