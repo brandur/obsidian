@@ -18,6 +18,8 @@ import Text.JSON                 ( JSON, encode, toJSObject )
 
 import Obsidian.Util
 
+-- ---------------------------------------------------------------------------
+
 m :: String
 m = "Obsidian.CGI"
 
@@ -30,6 +32,7 @@ m = "Obsidian.CGI"
 output' :: MonadCGI m => String -> m CGIResult
 output' = return . CGIOutput . fromString
 
+{- | Logs an exception and outputs a 500 internal server error. -}
 outputException' ::  (MonadCGI m, MonadIO m) => SomeException -> m CGIResult
 outputException' ex = do
     liftIO $ exceptionM m ex
@@ -49,12 +52,16 @@ outputJSON = outputText . encode . toJSObject
 -- Exceptions
 --
 
+{- | Catches an exception thrown from the CGI monad if necessary and passes 
+   the exception to an apprioriate function for processing. -}
 handleErrors' :: CGI CGIResult -> CGI CGIResult
 handleErrors' a = catchCGI' (do 
                       r <- a
                       return r)
                   (outputException')
 
+{- | Handles a thrown exception in the CGI monad. If an exception is thrown, 
+   it's passed to the given handler method to be taken care of. -}
 catchCGI' :: Exception e => CGI a -> (e -> CGI a) -> CGI a
 catchCGI' c h = tryCGI' c >>= either h return
 
@@ -62,3 +69,4 @@ tryCGI' :: Exception e => CGI a -> CGI (Either e a)
 tryCGI' (CGIT c) = CGIT (ReaderT (WriterT . f . runWriterT . runReaderT c ))
     where
         f = liftM (either (\ex -> (Left ex, mempty)) (first Right)) . try
+

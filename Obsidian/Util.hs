@@ -35,7 +35,7 @@ trim = f . f
 -- Config
 --
 
--- Gets a config parser (or an error)
+{- | Gets a ConfigParser built from the file at the given path. -}
 getConfig :: String -> IO (Either CPError ConfigParser)
 getConfig c = runErrorT . join . liftIO $ readfile emptyCP c
 
@@ -51,9 +51,12 @@ getD cp section option defaultVal = do
 -- Logging
 --
 
+{- | Logs an exception. -}
 exceptionM :: String -> SomeException -> IO ()
 exceptionM m' ex = errorM m' $ "exception: " ++ (show ex)
 
+{- | Initializes logging facilities given a ConfigParser. The relevant config 
+   options are "log/path" and "log/priority". -}
 initLog :: ConfigParser -> IO ()
 initLog cp = do 
     let path     = getD cp "log" "path" "obsidian.log"
@@ -64,6 +67,7 @@ initLog cp = do
     infoM m $ printf "logging started, path = <%s>, priority = <%s>" 
                      path (show priority)
 
+{- | Parses a Priority data structure from a string. -}
 toPriority :: String -> Priority
 toPriority p = do
     let p' = map toLower p

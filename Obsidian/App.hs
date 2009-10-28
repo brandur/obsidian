@@ -24,7 +24,6 @@ import Network.CGI.Monad    ( MonadCGI(..) )
 import Text.JSON            ( JSON )
 
 import Obsidian.CGI
---import Obsidian.Util
 
 -- ---------------------------------------------------------------------------
 -- Monad
