@@ -1,5 +1,5 @@
 module Obsidian.Util (
-    exceptionM, getConfig, initLog, trim, 
+    exceptionM, getConfig, getF, initLog, trim, 
     -- Log
     alertM, criticalM, debugM, emergencyM, errorM, infoM, noticeM, warningM, 
     -- Printf
@@ -13,6 +13,7 @@ import Control.Monad.Trans       ( liftIO )
 import Data.Char                 ( isSpace, toLower )
 import Data.ConfigFile           ( CPError, ConfigParser, emptyCP, get, 
                                    readfile )
+import Data.Either.Utils         ( forceEither )
 import System.Log.Logger         ( addHandler, alertM, criticalM, debugM, 
                                    emergencyM, errorM, infoM, noticeM, 
                                    Priority(..), rootLoggerName, setLevel, 
@@ -46,6 +47,13 @@ getD cp section option defaultVal = do
     case opt of 
         Left _  -> defaultVal
         Right o -> o
+
+getF :: ConfigParser -> String -> String -> String
+getF cp section option = forceEither $ get cp section option
+
+-- ---------------------------------------------------------------------------
+-- File store
+--
 
 -- ---------------------------------------------------------------------------
 -- Logging
