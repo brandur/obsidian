@@ -2,13 +2,9 @@ module Main where
 
 import Codec.Binary.UTF8.String ( decodeString )
 import Control.Concurrent       ( forkIO )
-import Control.Exception        ( throwIO, try )
-import Control.Monad            ( liftM, unless )
+import Control.Monad            ( liftM )
 import Control.Monad.Trans      ( liftIO )
-import Data.ConfigFile          ( ConfigParser )
 import Data.Either.Utils        ( forceEither )
-import Data.FileStore.Git       ( gitFileStore )
-import Data.FileStore.Types     ( FileStore, FileStoreError(..), initialize )
 import Data.List                ( find, intercalate )
 import Data.List.Split          ( splitOn )
 import Network.CGI              ( redirect, requestURI, requestMethod )
@@ -35,23 +31,6 @@ main = do
     -- Fork and run the application
     runFastCGIConcurrent' forkIO 2048 $ do 
         handleErrors' $ runApp cp fs handleRequest
-
-initFileStore :: ConfigParser -> IO (FileStore)
-initFileStore cp = do
-    let fsPath = getF cp "wiki" "path"
-    -- Initialize filestore (Git or whatever)
-    infoM m $ printf "wiki path = <%s>" fsPath
-    let fs = gitFileStore fsPath
-    repoExists <- try (initialize fs) >>= \res ->
-        case res of
-            Right _               -> do
-                warningM m $ printf "Created repository in <%s>" fsPath
-                return False
-            Left RepositoryExists -> return True
-            Left e                -> throwIO e >> return False
-    unless repoExists $ do
-        infoM m $ "repo didn't exist, creating default files"
-    return fs
 
 -- Here we just define the config's location
 configFile :: String

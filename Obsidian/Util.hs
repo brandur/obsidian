@@ -1,18 +1,20 @@
 module Obsidian.Util (
-    exceptionM, getConfig, getF, initLog, trim, 
+    exceptionM, getConfig, getF, initFileStore, initLog, trim, 
     -- Log
     alertM, criticalM, debugM, emergencyM, errorM, infoM, noticeM, warningM, 
     -- Printf
     printf
 ) where
 
-import Control.Exception         ( SomeException )
-import Control.Monad             ( join )
+import Control.Exception         ( SomeException, throwIO, try )
+import Control.Monad             ( join, unless )
 import Control.Monad.Error       ( runErrorT )
 import Control.Monad.Trans       ( liftIO )
 import Data.Char                 ( isSpace, toLower )
 import Data.ConfigFile           ( CPError, ConfigParser, emptyCP, get, 
                                    readfile )
+import Data.FileStore.Git        ( gitFileStore )
+import Data.FileStore.Types      ( FileStore, FileStoreError(..), initialize )
 import Data.Either.Utils         ( forceEither )
 import System.Log.Logger         ( addHandler, alertM, criticalM, debugM, 
                                    emergencyM, errorM, infoM, noticeM, 
@@ -54,6 +56,23 @@ getF cp section option = forceEither $ get cp section option
 -- ---------------------------------------------------------------------------
 -- File store
 --
+
+initFileStore :: ConfigParser -> IO (FileStore)
+initFileStore cp = do
+    let fsPath = getF cp "wiki" "path"
+    -- Initialize filestore (Git or whatever)
+    infoM m $ printf "wiki path = <%s>" fsPath
+    let fs = gitFileStore fsPath
+    repoExists <- try (initialize fs) >>= \res ->
+        case res of
+            Right _               -> do
+                warningM m $ printf "Created repository in <%s>" fsPath
+                return False
+            Left RepositoryExists -> return True
+            Left e                -> throwIO e >> return False
+    unless repoExists $ do
+        infoM m $ "repo didn't exist, creating default files"
+    return fs
 
 -- ---------------------------------------------------------------------------
 -- Logging
