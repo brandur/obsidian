@@ -7,7 +7,8 @@ obsidian : $(hss)
 	ghc -Wall -threaded --make -O2 -o $(app) Obsidian.hs 
 
 clean :
-	find . -iregex "$(app)|.*\.\(bin\|cgi\|out\|o\|hi\|o-boot\|hi-boot\)" -print0 | xargs -0 rm
+	rm $(app)
+	find . -iregex ".*\.\(bin\|cgi\|out\|o\|hi\|o-boot\|hi-boot\)" -print0 | xargs -0 rm
 
 #test : $(hss)
 #	ghc -Wall --make -o test.bin Obsidian/Test/App.hs
