@@ -1,3 +1,28 @@
+module Obsidian.App (
+    AppEnv(..), Handler, ObsidianServerPart
+) where
+
+import Control.Monad.Reader ( ReaderT(..) )
+import Data.ConfigFile      ( ConfigParser )
+import Data.FileStore.Types ( FileStore )
+import Happstack.Server     ( ServerPartT(..), Response )
+
+-- ---------------------------------------------------------------------------
+-- Monad
+--
+
+{- | Provides a container for entities relevant to the current run of the 
+   application. -}
+data AppEnv = AppEnv { 
+    appCP :: ConfigParser, 
+    appFS :: FileStore 
+    }
+
+type ObsidianServerPart = ServerPartT (ReaderT AppEnv IO)
+
+type Handler = ObsidianServerPart Response
+
+{-
 {-# OPTIONS -XTypeSynonymInstances 
             -XGeneralizedNewtypeDeriving 
             -XScopedTypeVariables #-}
@@ -109,4 +134,4 @@ output404 s = do
     let p = "404: " ++ intercalate "/" s
     liftIO $ infoM m $ printf "sent 404, requested path was <%s>" p
     outputNotFound p
-
+-}

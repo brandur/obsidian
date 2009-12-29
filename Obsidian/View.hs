@@ -30,12 +30,12 @@ goToPage :: String -> App CGIResult
 goToPage path = do
     fs <- getFileStore
     let isPageFile f = ".page" == takeExtension f
-    let onlyPages    = map dropExtension . filter isPageFile
+        onlyPages    = map dropExtension . filter isPageFile
     allPageNames <- liftM onlyPages $ liftIO $ index fs
     liftIO $ debugM m $ printf "Going to page = <%s>" path
     let findPage p         = find p allPageNames
-    let exactMatch p       = path == p
-    let insensitiveMatch p = (map toLower path) == (map toLower p)
+        exactMatch p       = path == p
+        insensitiveMatch p = (map toLower path) == (map toLower p)
     case findPage exactMatch of
         Just p  -> do 
             liftIO $ debugM m $ printf "Found exact match for page"

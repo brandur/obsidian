@@ -1,20 +1,20 @@
-cgi := obsidian.cgi
+app := obsidian
 hss := $(shell find . -name "*.hs" -print)
 
-all : $(cgi)
+all : $(app)
 
-obsidian.cgi : $(hss)
-	ghc -Wall -threaded --make -O2 -o obsidian.cgi Obsidian.hs 
-
-test : $(hss)
-	ghc -Wall --make -o test.bin Obsidian/Test/App.hs
+obsidian : $(hss)
+	ghc -Wall -threaded --make -O2 -o $(app) Obsidian.hs 
 
 clean :
-	find . -iregex ".*\.\(bin\|cgi\|out\|o\|hi\|o-boot\|hi-boot\)" -print0 | xargs -0 rm
+	find . -iregex "$(app)|.*\.\(bin\|cgi\|out\|o\|hi\|o-boot\|hi-boot\)" -print0 | xargs -0 rm
 
-start : 
-	/usr/bin/cgi-fcgi -start -connect localhost:9001 $(cgi)
+#test : $(hss)
+#	ghc -Wall --make -o test.bin Obsidian/Test/App.hs
 
-stop : 
-	kill $(shell pidof $(cgi))
+#start : 
+#	/usr/bin/cgi-fcgi -start -connect localhost:9001 $(cgi)
+
+#stop : 
+#	kill $(shell pidof $(cgi))
 

@@ -1,76 +1,65 @@
 module Main where
 
-import Codec.Binary.UTF8.String ( decodeString )
-import Control.Concurrent       ( forkIO )
-import Control.Monad            ( liftM )
+import Control.Monad            ( liftM, mplus, msum )
+import Control.Monad.Reader     ( ReaderT(..) )
 import Control.Monad.Trans      ( liftIO )
 import Data.Either.Utils        ( forceEither )
-import Data.List                ( find, intercalate )
-import Data.List.Split          ( splitOn )
-import Network.CGI              ( redirect, requestURI, requestMethod )
-import Network.FastCGI          ( runFastCGIConcurrent' )
-import Network.URI              ( URI(..), unEscapeString )
+import Data.FileStore.Types     ( FileStore )
+import Happstack.Server         ( Conf(..), FilterFun, ServerMonad, 
+                                  ServerPart, Response, 
+                                  fileServeStrict, mapServerPartT, 
+                                  simpleHTTP, nullConf, setHeader )
 
 import Obsidian.App
-import Obsidian.CGI
+import Obsidian.Config
+import Obsidian.Handlers
 import Obsidian.Util
-import Obsidian.View
 
-m :: String
-m = "Main"
+-- ---------------------------------------------------------------------------
+-- Main
+--
 
--- When starting up, start listening for connections immediately. The number 
--- of threads should be the same as what the frontend webserver is configured 
--- with.
 main :: IO ()
-main = do 
+main = do
     cp <- liftM forceEither $ getConfig configFile
     liftIO $ initLog cp
+    let p = getDN cp ("http" // "port") 3001
     fs <- liftIO $ initFileStore cp
-    -- Fork (with lightweight threads) and run the application
-    runFastCGIConcurrent' forkIO 2048 $ do 
-        handleErrors' $ runApp cp fs handleRequest
+    simpleHTTP nullConf { port = p } $ runObsidian cp fs
+
+-- ---------------------------------------------------------------------------
+-- Helpers
+--
 
 -- Here we just define the config's location
 configFile :: String
 configFile = "etc/obsidian.conf"
 
--- Digest the incoming URI before sending it to the dispatcher
-handleRequest :: App CGIResult
-handleRequest = do
-    uri    <- requestURI
-    method <- requestMethod
-    dispatch' method (pathList uri)
+runObsidian :: ConfigParser -> FileStore -> ServerPart Response
+runObsidian cp fs = 
+    let static        = getD cp ("http" // "static_path") "data/static"
+        staticHandler = withExpiresHeaders $ fileServeStrict [] static
+        env           = AppEnv { appCP = cp, appFS = fs }
+        handlers      = obsidianHandlers
+    in staticHandler `mplus` runHandler env (msum handlers)
 
--- Split a URI into a list of its components
-pathList :: URI -> [String]
-pathList = splitOn "/" . decodeString . unEscapeString . uriPath
+-- All handlers for the Obsidian application
+obsidianHandlers :: [Handler]
+obsidianHandlers = 
+    [
+    indexPage
+    ]
 
--- Pre-dispatch. Handles dispatching to the index page and removing trailing 
--- slashes.
-dispatch' :: String -> [String] -> App CGIResult
-dispatch' method path = 
-    case path of 
-        ["",""] -> dispatch method ["index"]
-        ("":xs) -> case find (== "") xs of 
-                       Nothing -> dispatch method xs
-                       -- Redirect a trailing slash back to the same resource 
-                       -- minus the slash
-                       Just _  -> redirect $ 
-                           '/':intercalate "/" (filter (/= "") xs)
-        _       -> output404 path
+-- Converts an Obsidian Handler into a standard Happstack ServerPart.
+runHandler :: AppEnv -> Handler -> ServerPart Response
+runHandler = mapServerPartT . unpackReaderT
 
--- Signature for the dispatcher. Its job is to send each request to an 
--- appropriate module.
-dispatch :: String -> [String] -> App CGIResult
+unpackReaderT:: (Monad m)
+    => c
+    -> (ReaderT c m) (Maybe ((Either b a), FilterFun b))
+    -> m (Maybe ((Either b a), FilterFun b))
+unpackReaderT st handler = runReaderT handler st
 
-dispatch "GET" ["new", "haskell"]   = contentPage "haskell" ["haskell", "is tricky"]
-
-dispatch "GET" ("new":xs) = goToPage (intercalate "/" xs)
-
-dispatch _ path = output404 path
-
-indexPage :: App CGIResult
-indexPage = do
-    contentPage "hello" ["Hello, world!"]
+withExpiresHeaders :: ServerMonad m => m Response -> m Response
+withExpiresHeaders = liftM (setHeader "Cache-Control" "max-age=21600")
 
