@@ -42,7 +42,8 @@ trim = f . f
 getConfig :: String -> IO (Either CPError ConfigParser)
 getConfig c = runErrorT . join . liftIO $ readfile emptyCP c
 
-{- | ConfigParser get that allows a default value. -}
+{- | ConfigParser get that allows a default value to be specified for when the 
+   given config value is missing. -}
 getD :: ConfigParser -> String -> String -> String -> String
 getD cp section option defaultVal = do 
     opt <- runErrorT $ get cp section option
@@ -50,6 +51,8 @@ getD cp section option defaultVal = do
         Left _  -> defaultVal
         Right o -> o
 
+{- | ConfigParser get that throws an exception when the given config value is 
+   missing. -}
 getF :: ConfigParser -> String -> String -> String
 getF cp section option = forceEither $ get cp section option
 
@@ -57,11 +60,12 @@ getF cp section option = forceEither $ get cp section option
 -- File store
 --
 
+{- | Initializes a filestore backend given a ConfigParser. This creates a new 
+     repository at "wiki/path" if one didn't exist there before. -}
 initFileStore :: ConfigParser -> IO (FileStore)
 initFileStore cp = do
-    let fsPath = getF cp "wiki" "path"
-    -- Initialize filestore (Git or whatever)
-    infoM m $ printf "wiki path = <%s>" fsPath
+    let fsPath = getF cp "file_store" "path"
+    infoM m $ printf "filestore path = <%s>" fsPath
     let fs = gitFileStore fsPath
     repoExists <- try (initialize fs) >>= \res ->
         case res of
@@ -71,7 +75,7 @@ initFileStore cp = do
             Left RepositoryExists -> return True
             Left e                -> throwIO e >> return False
     unless repoExists $ do
-        infoM m $ "repo didn't exist, creating default files"
+        infoM m $ "@todo: repo didn't exist, creating default files"
     return fs
 
 -- ---------------------------------------------------------------------------

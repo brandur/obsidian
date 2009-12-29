@@ -25,10 +25,9 @@ m = "Main"
 main :: IO ()
 main = do 
     cp <- liftM forceEither $ getConfig configFile
-    -- Initialize logging
     liftIO $ initLog cp
     fs <- liftIO $ initFileStore cp
-    -- Fork and run the application
+    -- Fork (with lightweight threads) and run the application
     runFastCGIConcurrent' forkIO 2048 $ do 
         handleErrors' $ runApp cp fs handleRequest
 
@@ -52,20 +51,22 @@ pathList = splitOn "/" . decodeString . unEscapeString . uriPath
 dispatch' :: String -> [String] -> App CGIResult
 dispatch' method path = 
     case path of 
-        ["",""] -> indexPage
+        ["",""] -> dispatch method ["index"]
         ("":xs) -> case find (== "") xs of 
                        Nothing -> dispatch method xs
                        -- Redirect a trailing slash back to the same resource 
                        -- minus the slash
-                       Just _  -> redirect $ '/' : intercalate "/" (filter (/= "") xs)
+                       Just _  -> redirect $ 
+                           '/':intercalate "/" (filter (/= "") xs)
         _       -> output404 path
 
 -- Signature for the dispatcher. Its job is to send each request to an 
 -- appropriate module.
 dispatch :: String -> [String] -> App CGIResult
 
-dispatch "GET" ["haskell"]   = contentPage "haskell" ["haskell", "is tricky"]
---dispatch "GET" ["help"]    = stdPage "help"
+dispatch "GET" ["new", "haskell"]   = contentPage "haskell" ["haskell", "is tricky"]
+
+dispatch "GET" ("new":xs) = goToPage (intercalate "/" xs)
 
 dispatch _ path = output404 path
 

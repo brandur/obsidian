@@ -3,7 +3,7 @@
             -XScopedTypeVariables #-}
 
 module Obsidian.App (
-    App, AppEnv(..), AppT, getOption, output404, runApp, tryApp, 
+    App, AppEnv(..), AppT, getFileStore, getOption, output404, runApp, tryApp, 
 ) where
 
 import Prelude              hiding ( catch )
@@ -78,8 +78,14 @@ tryApp :: App a -> App (Either SomeException a)
 tryApp (AppT c) = AppT (ReaderT (tryCGI' . runReaderT c))
 
 -- ---------------------------------------------------------------------------
--- Configuration
+-- App-bound data accessors
 --
+
+{- | Pulls the application's FileStore out of the App monad. -}
+getFileStore :: App (FileStore)
+getFileStore = do
+    fs <- asks appFS
+    return fs
 
 {- | Pulls the config option identified by section/option from the App monad's 
    configuration parser. -}
@@ -100,7 +106,7 @@ getOption section option = do
 {- | Outputs a 404 page and logs the requested resource. -}
 output404 :: [String] -> App CGIResult
 output404 s = do 
-    let p = intercalate "/" s
+    let p = "404: " ++ intercalate "/" s
     liftIO $ infoM m $ printf "sent 404, requested path was <%s>" p
     outputNotFound p
 
