@@ -1,8 +1,9 @@
 module Obsidian.App (
-    AppEnv(..), Handler, ObsidianServerPart
+    AppEnv(..), Handler, ObsidianServerPart, getFileStore
 ) where
 
-import Control.Monad.Reader ( ReaderT(..) )
+import Control.Monad        ( liftM )
+import Control.Monad.Reader ( ReaderT(..), ask )
 import Data.ConfigFile      ( ConfigParser )
 import Data.FileStore.Types ( FileStore )
 import Happstack.Server     ( ServerPartT(..), Response )
@@ -14,13 +15,20 @@ import Happstack.Server     ( ServerPartT(..), Response )
 {- | Provides a container for entities relevant to the current run of the 
    application. -}
 data AppEnv = AppEnv { 
-    appCP :: ConfigParser, 
-    appFS :: FileStore 
+      appCP :: ConfigParser 
+    , appFS :: FileStore 
     }
 
 type ObsidianServerPart = ServerPartT (ReaderT AppEnv IO)
 
 type Handler = ObsidianServerPart Response
+
+-- ---------------------------------------------------------------------------
+-- App-bound data accessors
+--
+
+getFileStore :: ObsidianServerPart FileStore
+getFileStore = liftM appFS ask
 
 {-
 {-# OPTIONS -XTypeSynonymInstances 

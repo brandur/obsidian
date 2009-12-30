@@ -8,11 +8,13 @@ import Data.FileStore.Types     ( FileStore )
 import Happstack.Server         ( Conf(..), FilterFun, ServerMonad, 
                                   ServerPart, Response, askRq, 
                                   fileServeStrict, mapServerPartT, rqUri, 
-                                  rsCode, simpleHTTP, nullConf, setHeader )
+                                  rsCode, simpleHTTP, nullConf, 
+                                  setHeader )
 import Safe                     ( lastNote )
 
 import Obsidian.App
 import Obsidian.Config
+import Obsidian.FileStore
 import Obsidian.Handlers
 import Obsidian.Util
 
@@ -29,7 +31,7 @@ main = do
     simpleHTTP nullConf { port = p } $ runObsidian cp fs
 
 -- ---------------------------------------------------------------------------
--- Helpers
+-- Core
 --
 
 -- Here we just define the config's location
@@ -39,7 +41,7 @@ configFile = "etc/obsidian.conf"
 runObsidian :: ConfigParser -> FileStore -> ServerPart Response
 runObsidian cp fs = 
     let static        = getD cp ("http" // "static_path") "data/static"
-        staticHandler = withExpiresHeaders $ fileServeStrict' [] static
+        staticHandler = withLongExpiresHeaders $ fileServeStrict' [] static
         env           = AppEnv { appCP = cp, appFS = fs }
         handlers      = obsidianHandlers
     in staticHandler `mplus` runHandler env (msum handlers)
@@ -47,8 +49,14 @@ runObsidian cp fs =
 -- All handlers for the Obsidian application
 obsidianHandlers :: [Handler]
 obsidianHandlers = [
-    guardIndex >> indexPage
+      guardIndex >> indexPage
+    , handlePage
+    , handleAny
     ]
+
+-- ---------------------------------------------------------------------------
+-- Helpers
+--
 
 -- Like 'fileServeStrict', but if file is not found, fail instead of returning 
 -- a 404 error.
@@ -64,12 +72,14 @@ fileServeStrict' ps p = do
 runHandler :: AppEnv -> Handler -> ServerPart Response
 runHandler = mapServerPartT . unpackReaderT
 
+-- Some sort of Haskell voodoo. Copied from Gitit.
 unpackReaderT:: (Monad m)
     => c
     -> (ReaderT c m) (Maybe ((Either b a), FilterFun b))
     -> m (Maybe ((Either b a), FilterFun b))
-unpackReaderT st handler = runReaderT handler st
+unpackReaderT env handler = runReaderT handler env
 
-withExpiresHeaders :: ServerMonad m => m Response -> m Response
-withExpiresHeaders = liftM (setHeader "Cache-Control" "max-age=21600")
+-- Sets long expire headers for static files
+withLongExpiresHeaders :: ServerMonad m => m Response -> m Response
+withLongExpiresHeaders = liftM (setHeader "Cache-Control" "max-age=21600")
 

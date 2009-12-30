@@ -1,16 +1,13 @@
 module Obsidian.Util (
-    exceptionM, initFileStore, initLog, trim, 
+    exceptionM, initLog, trim, 
     -- Log
     alertM, criticalM, debugM, emergencyM, errorM, infoM, noticeM, warningM, 
     -- Printf
     printf
 ) where
 
-import Control.Exception         ( SomeException, throwIO, try )
-import Control.Monad             ( unless )
+import Control.Exception         ( SomeException )
 import Data.Char                 ( isSpace, toUpper )
-import Data.FileStore.Git        ( gitFileStore )
-import Data.FileStore.Types      ( FileStore, FileStoreError(..), initialize )
 import Data.List                 ( intercalate )
 import System.Log.Logger         ( addHandler, alertM, criticalM, debugM, 
                                    emergencyM, errorM, infoM, noticeM, 
@@ -20,6 +17,8 @@ import System.Log.Handler.Simple ( fileHandler )
 import Text.Printf               ( printf )
 
 import Obsidian.Config
+
+-- ---------------------------------------------------------------------------
 
 m :: String
 m = "Obsidian.Util"
@@ -31,28 +30,6 @@ m = "Obsidian.Util"
 trim :: String -> String
 trim = f . f
     where f = reverse . dropWhile isSpace
-
--- ---------------------------------------------------------------------------
--- File store
---
-
-{- | Initializes a filestore backend given a ConfigParser. This creates a new 
-     repository at "wiki/path" if one didn't exist there before. -}
-initFileStore :: ConfigParser -> IO (FileStore)
-initFileStore cp = do
-    let fsPath = getF cp ("file_store" // "path")
-    infoM m $ printf "Filestore path = <%s>" fsPath
-    let fs = gitFileStore fsPath
-    repoExists <- try (initialize fs) >>= \res ->
-        case res of
-            Right _               -> do
-                warningM m $ printf "Created repository in <%s>" fsPath
-                return False
-            Left RepositoryExists -> return True
-            Left e                -> throwIO e >> return False
-    unless repoExists $ do
-        infoM m $ "@todo: repo didn't exist, creating default files"
-    return fs
 
 -- ---------------------------------------------------------------------------
 -- Logging
