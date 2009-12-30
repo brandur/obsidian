@@ -11,6 +11,8 @@ import Data.FileStore.Types      ( FileStore, FileStoreError(..), index,
 import Obsidian.Config
 import Obsidian.Util
 
+-- ---------------------------------------------------------------------------
+
 m :: String
 m = "Obsidian.FileStore"
 

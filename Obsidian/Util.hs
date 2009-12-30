@@ -27,6 +27,7 @@ m = "Obsidian.Util"
 -- General
 --
 
+{- | Trims whitespace from the beginning and end of a string. -}
 trim :: String -> String
 trim = f . f
     where f = reverse . dropWhile isSpace
